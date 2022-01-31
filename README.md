@@ -1,3 +1,4 @@
-# js-g9emag
+README
 
-[Edit on StackBlitz ⚡️](https://stackblitz.com/edit/js-g9emag)
+A nice project for François Delbot.
+Useful for Graph Theory, to draw vertices and edges of our model.
