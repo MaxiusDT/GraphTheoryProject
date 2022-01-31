@@ -1,0 +1,21 @@
+h1,
+h2 {
+  font-family: Lato;
+}
+
+div {
+  margin: 1rem 0;
+}
+
+#withVertices {
+  display: none;
+}
+
+#edgesList {
+  cursor: pointer;
+}
+
+#drawZone {
+  width: 500px;
+  height: 500px;
+}

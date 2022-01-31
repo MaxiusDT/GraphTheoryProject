@@ -1,0 +1,21 @@
+<div>
+  <input type="number" placeholder="Number of vertices" id="verticesControl" />
+</div>
+
+<div id="withVertices">
+  <div>
+    <input
+      type="text"
+      placeholder="New edge (format = X/Y)"
+      id="newEdgeControl"
+      pattern="^\d+/\d+$"
+    />
+    <button id="addEdgeButton" disabled>Add edge</button>
+  </div>
+
+  <div id="edgesList"></div>
+
+  <button id="drawButton">Draw graphe</button>
+
+  <div id="drawZone"></div>
+</div>
