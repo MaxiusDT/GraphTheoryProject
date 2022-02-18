@@ -2,8 +2,10 @@
 import './style.css';
 import cytoscape from 'cytoscape';
 
+let cy;
+
 // Interval at wihch the drawing will add vertices / edges
-const drawInterval = 200;
+const drawInterval = 50;
 
 // --------------- CONSTANTS DECLARATIONS ---------------
 
@@ -16,6 +18,7 @@ const newEdgeControl = document.querySelector('#newEdgeControl');
 const addEdgeButton = document.querySelector('#addEdgeButton');
 /** @type HTMLButtonElement */
 const drawButton = document.querySelector('#drawButton');
+const dijkstraButton = document.querySelector('#dijkstraButton');
 
 const drawZone = document.querySelector('#drawZone');
 
@@ -26,14 +29,43 @@ const edgesList = document.querySelector('#edgesList');
 /** @type {{ start: number; end: number }[]} */
 let edges = [];
 
+dijkstraButton.addEventListener('click', () => {
+  const elements = cy.elements();
+  const dijkstra = elements.dijkstra.bind(elements);
+
+  const orgn = +prompt('Origin node');
+  if (isNaN(orgn)) return alert('Not a number');
+
+  const trgt = +prompt('Target node');
+  if (isNaN(trgt)) return alert('Not a number');
+
+  const res = dijkstra(cy.$('#n' + orgn), function (edge) {
+    return edge.data('weight') ?? Infinity;
+  });
+
+  const path = res
+    .pathTo(cy.$('#n' + trgt))
+    .filter((v, i) => !(i % 2))
+    .map((v) => v.data('id'));
+
+  const distance = res.distanceTo(cy.$('#n' + trgt));
+
+  console.log(distance, path);
+});
+
 // When the vertices control gets its value updated
 verticesControl.addEventListener('input', () => {
-  // Hide the rest of the form if the value is not a number greater than 0
+  // Hide the rest of the form if the value is not a number above 0
   if (+verticesControl.value) withVertices.style.display = 'block';
   else withVertices.style.display = 'none';
   // Empty the edges to avoid errors, then update the UI
   edges = [];
   fillList();
+});
+
+// If the user presses enter while being in the vertices control field, switch to the next selector
+verticesControl.addEventListener('keydown', ({ key }) => {
+  if (key === 'Enter') document.getElementById('newEdgeControl').focus();
 });
 
 // When the new edge control gets its value updated
@@ -45,16 +77,16 @@ newEdgeControl.addEventListener('input', () => {
   // Get the start / end value with a regex
   const [start, end] = value.match(/(\d+)/g)?.map((v) => +v) ?? [-1, -1];
   const isBound =
-    start >= 0 && end >= 0 && start <= count && end <= count && start !== end;
+    start >= 0 && end >= 0 && start <= count - 1 && end <= count - 1;
 
   // If the field is valid (X/Y) and the values are bound between 0 and the # of vertices, enable button
   if (isBound && isValid) addEdgeButton.disabled = false;
   else addEdgeButton.disabled = true;
 });
 
-// If the user presses enter when being in the new edge control field, click on the button for him
-newEdgeControl.addEventListener('keyup', ({ keyCode }) => {
-  if (keyCode === 13) addEdgeButton.click();
+// If the user presses enter while being in the new edge control field, click on the button for him
+newEdgeControl.addEventListener('keydown', ({ key }) => {
+  if (key === 'Enter') addEdgeButton.click();
 });
 
 // On click on the add edge button
@@ -99,23 +131,23 @@ function fillList() {
   edgesList.appendChild(list);
 }
 
-// On click on the drax button
+// On click on the draw button
 drawButton.addEventListener('click', () => {
   // Get vertices and edges
   const vertices = +verticesControl.value;
   const hasEdges = !!edges.length;
 
-  // If there is some, draw, else give up
+  // If there is any, draw, else give up
   if (!vertices || !hasEdges) return;
 
-  createGraphe();
+  createGraph();
 });
 
-function createGraphe() {
+function createGraph() {
   // Get the # of vertices
   const vertices = +verticesControl.value;
-  // Create the cytoscape object, to draw the graphe
-  const cy = cytoscape({
+  // Create the cytoscape object, to draw the Graph
+  cy = cytoscape({
     // Container is required, must be an HTML element of the page
     container: drawZone,
     // Style used to add the name of the vertices, and make them bigger
@@ -123,18 +155,27 @@ function createGraphe() {
       {
         selector: 'node',
         style: {
-          label: 'data(id)',
+          label: 'data(name)',
           'text-halign': 'center',
           'text-valign': 'center',
           width: 50,
           height: 50,
         },
       },
+      {
+        selector: 'edge',
+        style: {
+          label: 'data(weight)',
+          'text-margin-y': -15,
+          'text-halign': 'center',
+          'text-valign': 'center',
+        },
+      },
     ],
   });
 
   // Function to add the vertices and edges one by one
-  addVerticesToGraphe(vertices, cy);
+  addVerticesToGraph(vertices, cy);
 
   // ------------ OLD, INSTANT DRAWING ------------
 
@@ -155,9 +196,9 @@ function createGraphe() {
   // layout.run();
 }
 
-function addVerticesToGraphe(vertices, cy) {
+function addVerticesToGraph(vertices, cy) {
   // Create an array the size of the # of vertices
-  const vs = new Array(vertices).fill('toto').map((_, i) => i);
+  const vs = new Array(vertices).fill(0).map((_, i) => i);
 
   // Create an interval to display them one by one
   const interval = setInterval(() => {
@@ -165,18 +206,18 @@ function addVerticesToGraphe(vertices, cy) {
     const i = vs.shift();
     // If no element found, end of array, so stop interval and add edges
     if (i === undefined) {
-      addEdgesToGraphe(cy);
+      addEdgesToGraph(cy);
       return clearInterval(interval);
     }
-    // Else, add the vertice to the graphe
-    cy.add({ group: 'nodes', data: { id: `n${i}` } });
+    // Else, add the vertice to the graph
+    cy.add({ group: 'nodes', data: { id: `n${i}`, name: i } });
     const layout = cy.layout({ name: 'circle', avoidOverlap: true });
     layout.run();
   }, drawInterval);
 }
 
 // Same function as above but for the edges
-function addEdgesToGraphe(cy) {
+function addEdgesToGraph(cy) {
   const vs = [...edges];
 
   const interval = setInterval(() => {
@@ -192,12 +233,20 @@ function addEdgesToGraphe(cy) {
         target: `n${i.end}`,
       },
     });
+
+    cy.$(`#e${edges.indexOf(i)}`).on('click', (evt) => {
+      const edge = evt.target;
+      const weight = +prompt('Edge weight');
+      if (isNaN(weight)) return alert('Not a number');
+      edge.data('weight', weight);
+    });
+
     const layout = cy.layout({ name: 'circle', avoidOverlap: true });
     layout.run();
   }, drawInterval);
 }
 
-function drawGrapheStepByStep() {
+function drawGraphStepByStep() {
   // Get vertices and edges
   // Loop on edges
   // For each edge at index
@@ -209,3 +258,21 @@ function drawGrapheStepByStep() {
   // call layout.run()
   // Add container to the page
 }
+
+// ------------------------- TO DELETE -----------------------------
+verticesControl.value = 10;
+verticesControl.dispatchEvent(
+  new Event('input', {
+    bubbles: true,
+    cancelable: true,
+  })
+);
+
+edges = [
+  { start: 1, end: 2 },
+  { start: 2, end: 3 },
+];
+
+fillList();
+
+drawButton.dispatchEvent(new Event('click'));
