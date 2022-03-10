@@ -1,5 +1,6 @@
 // Import stylesheets
 import './style.css';
+import './vars.js';
 import cytoscape from 'cytoscape';
 
 let cy;
@@ -7,38 +8,41 @@ let cy;
 // Interval at wihch the drawing will add vertices / edges
 const drawInterval = 50;
 
-// --------------- CONSTANTS DECLARATIONS ---------------
-
-/** @type HTMLInputElement */
-const verticesControl = document.querySelector('#verticesControl');
-/** @type HTMLInputElement */
-const newEdgeControl = document.querySelector('#newEdgeControl');
-
-/** @type HTMLButtonElement */
-const addEdgeButton = document.querySelector('#addEdgeButton');
-/** @type HTMLButtonElement */
-const drawButton = document.querySelector('#drawButton');
-const dijkstraButton = document.querySelector('#dijkstraButton');
-
-const drawZone = document.querySelector('#drawZone');
-
-const withVertices = document.querySelector('#withVertices');
-
-const edgesList = document.querySelector('#edgesList');
-
 /** @type {{ start: number; end: number }[]} */
 let edges = [];
 
+function toPng() {
+  const blob = cy.png({
+    output: 'blob',
+    full: true,
+  });
+
+  const file = new File([blob], 'graph.png', { type: 'image/png' });
+
+  const url = URL.createObjectURL(file);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.download = 'graph.png';
+
+  link.click();
+}
+
+// On click on the Dijkstra button
 dijkstraButton.addEventListener('click', () => {
   const elements = cy.elements();
   const dijkstra = elements.dijkstra.bind(elements);
 
+  // Origin node window & number validity check
   const orgn = +prompt('Origin node');
   if (isNaN(orgn)) return alert('Not a number');
 
+  // Target node window & number validity check
   const trgt = +prompt('Target node');
   if (isNaN(trgt)) return alert('Not a number');
 
+  // Return the value of all edges (default: infinity)
   const res = dijkstra(cy.$('#n' + orgn), function (edge) {
     return edge.data('weight') ?? Infinity;
   });
@@ -46,11 +50,14 @@ dijkstraButton.addEventListener('click', () => {
   const path = res
     .pathTo(cy.$('#n' + trgt))
     .filter((v, i) => !(i % 2))
-    .map((v) => v.data('id'));
+    .map((v) => v.data('id'))
+    .map((el) => el.replace('n', ''))
+    .join(' → ');
 
   const distance = res.distanceTo(cy.$('#n' + trgt));
 
-  console.log(distance, path);
+  dijkstraDistance.innerHTML = `The shortest distance from edge ${orgn} to edge ${trgt} is: ${distance}.`;
+  dijkstraPath.innerHTML = `The shortest path from edge ${orgn} to edge ${trgt} is: ${path}.`;
 });
 
 // When the vertices control gets its value updated
@@ -109,7 +116,6 @@ addEdgeButton.addEventListener('click', () => {
  * - Create an unordered list (ul)
  * - For each edge of the list of edges :
  *   - create a list item (li)
- *
  *   - set its content (start → end)
  *   - add it to the ul item
  *   - When clicked, removes it from the list of edges
@@ -246,18 +252,11 @@ function addEdgesToGraph(cy) {
   }, drawInterval);
 }
 
-function drawGraphStepByStep() {
-  // Get vertices and edges
-  // Loop on edges
-  // For each edge at index
-  // Create HTML container
-  // Create cytoscape object
-  // Add vertices to object
-  // Add edge #index
-  // Create layout object
-  // call layout.run()
-  // Add container to the page
-}
+// On click on the export button
+exportButton.addEventListener('click', () => {
+  // Export the current graph to png
+  toPng();
+});
 
 // ------------------------- TO DELETE -----------------------------
 verticesControl.value = 10;

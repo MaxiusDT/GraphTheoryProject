@@ -3,7 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "cytoscape": "3.21.0",
-    "dijkstrajs": "^1.0.2"
+    "cytoscape": "^3.21.0"
   }
 }
